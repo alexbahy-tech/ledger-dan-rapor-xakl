@@ -16,6 +16,21 @@ const SHEET_NAME = "Data Siswa";
  * Fungsi utama untuk menangani semua permintaan HTTP POST dari Front-end (untuk operasi Tulis/Ubah/Upload)
  */
 function doPost(e) {
+  
+  // >>> BARIS DIAGNOSTIK KRITIS (Logger.log) <<<
+  Logger.log("--- START DEBUG ---");
+  Logger.log("Parameters received: " + JSON.stringify(e.parameter));
+  // Cek apakah Apps Script menerima objek file
+  if (e.parameters.file) {
+    // Jika e.parameters.file adalah array (format upload), cek panjangnya
+    const fileArray = Array.isArray(e.parameters.file) ? e.parameters.file : [e.parameters.file];
+    Logger.log("File detected: " + (fileArray.length > 0) + ". Total parts: " + fileArray.length);
+  } else {
+    Logger.log("File detected: false/null (Parameter 'file' hilang).");
+  }
+  Logger.log("--- END DEBUG ---");
+  // >>> AKHIR BARIS DIAGNOSTIK <<<
+
   let result;
   
   try {
@@ -33,7 +48,7 @@ function doPost(e) {
       // >>> PENGECEKAN KESALAHAN UPLOAD (SERVER-SIDE CHECK) <<<
       let missingParam = [];
       if (!folderId || folderId.trim() === "") missingParam.push("Folder ID (Kolom C di Sheet kosong)");
-      // Cek File PDF dari sisi server
+      // Cek File PDF dari sisi server. Jika kosong, inilah yang menyebabkan error Anda.
       if (!fileBlob) missingParam.push("File PDF"); 
       
       if (missingParam.length > 0) {
@@ -43,7 +58,8 @@ function doPost(e) {
       
       // Simpan file ke Drive (menggunakan folderId siswa spesifik)
       const folder = DriveApp.getFolderById(folderId); 
-      const file = folder.createFile(fileBlob[0].setName(fileName + '.pdf'));
+      // Ambil elemen pertama dari array fileBlob (karena Apps Script menerimanya sebagai array)
+      const file = folder.createFile(fileBlob[0].setName(fileName + '.pdf')); 
       
       result = { 
         success: true, 
