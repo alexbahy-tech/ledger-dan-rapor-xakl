@@ -63,7 +63,6 @@ function doPost(e) {
     result = { success: false, message: error.message };
   }
   
-  // Mengembalikan JSON response yang benar (tanpa setHeader)
   return ContentService.createTextOutput(JSON.stringify(result))
     .setMimeType(ContentService.MimeType.JSON);
 }
@@ -93,7 +92,6 @@ function doGet(e) {
     result = { success: false, message: error.message };
   }
   
-  // Mengembalikan JSON response yang benar (tanpa setHeader)
   return ContentService.createTextOutput(JSON.stringify(result))
     .setMimeType(ContentService.MimeType.JSON);
 }
@@ -102,9 +100,6 @@ function doGet(e) {
 // 3. FUNGSI DATA SISWA (CRUD & Read)
 // =================================================================
 
-/**
- * Mengambil daftar siswa dari Google Sheet
- */
 function getSiswaList() {
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const sheet = ss.getSheetByName(SHEET_NAME);
@@ -113,27 +108,22 @@ function getSiswaList() {
     throw new Error(`Sheet dengan nama ${SHEET_NAME} tidak ditemukan.`);
   }
 
-  // Asumsi data dimulai dari baris 2 (setelah header)
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return { success: true, data: [] };
   
   const range = sheet.getRange(2, 1, lastRow - 1, 3);
   const values = range.getValues();
   
-  // Format data menjadi array of objects, menyertakan Row Index untuk Hapus
   const siswaList = values.map((row, index) => ({
-    rowIndex: index + 2, // Baris dimulai dari 2 di Sheet (setelah header)
-    nama: row[0], // NAMA_SISWA
-    kelas: row[1], // KELAS
-    folderId: row[2] // FOLDER_ID
+    rowIndex: index + 2, 
+    nama: row[0], 
+    kelas: row[1], 
+    folderId: row[2] 
   }));
   
   return { success: true, data: siswaList };
 }
 
-/**
- * Menambahkan siswa baru ke Sheet dan membuat folder di Drive
- */
 function tambahSiswa(nama, kelas) {
   if (!nama || !kelas) {
     throw new Error("Nama dan Kelas Siswa wajib diisi.");
@@ -148,7 +138,6 @@ function tambahSiswa(nama, kelas) {
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const sheet = ss.getSheetByName(SHEET_NAME);
   
-  // Kolom: NAMA_SISWA, KELAS, FOLDER_ID
   sheet.appendRow([nama, kelas, newFolderId]);
   
   return { 
@@ -157,32 +146,25 @@ function tambahSiswa(nama, kelas) {
   };
 }
 
-/**
- * Menghapus data siswa dari Sheet berdasarkan Row Index
- */
 function hapusSiswa(rowIndex) {
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const sheet = ss.getSheetByName(SHEET_NAME);
-  
-  // Hapus baris dari Sheet
   sheet.deleteRow(rowIndex);
   
   return { success: true, message: "Data siswa berhasil dihapus dari Sheet." };
 }
 
 /**
- * Mendapatkan link preview PDF terbaru
+ * Mendapatkan link preview PDF terbaru dan link download
  */
 function getPreviewLink(folderId) {
   try {
     const folder = DriveApp.getFolderById(folderId);
     
-    // Cari semua file PDF di folder
     const files = folder.getFilesByType(MimeType.PDF);
     let latestFile = null;
     let latestTime = 0;
     
-    // Iterasi untuk mencari file PDF terbaru (asumsi nama file tidak perlu difilter)
     while (files.hasNext()) {
       const file = files.next();
       if (file.getLastUpdated().getTime() > latestTime) {
@@ -192,11 +174,14 @@ function getPreviewLink(folderId) {
     }
     
     if (latestFile) {
-      // Menggunakan link embed untuk preview di iframe
+      // Pastikan file Drive yang diakses di-setting 'Anyone with the link can view'
+      // Agar bisa di-preview/download oleh siapapun yang mengakses Web App
       return { 
         success: true, 
-        // Mengganti 'view' dengan 'preview' untuk embed yang lebih baik di iframe
-        link: latestFile.getUrl().replace("view", "preview") 
+        // Link untuk iframe (embed view)
+        previewLink: latestFile.getUrl().replace("view", "preview"),
+        // Link Drive Asli (untuk download/print)
+        downloadLink: latestFile.getUrl()
       };
     } else {
       return { success: false, message: "Tidak ada file PDF ditemukan di folder ini." };

@@ -104,7 +104,23 @@
                                 <select class="form-select mb-3" id="previewSiswaSelect">
                                     <option value="" disabled selected>Pilih Siswa...</option>
                                 </select>
-                                <button class="btn btn-info w-100 text-white" onclick="loadPreview()">Tampilkan Preview PDF</button>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Pilih Dokumen</label><br>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="previewType" id="previewLedger" value="Ledger" checked>
+                                        <label class="form-check-label" for="previewLedger">Ledger</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="previewType" id="previewRapor" value="Rapor">
+                                        <label class="form-check-label" for="previewRapor">Rapor</label>
+                                    </div>
+                                </div>
+                                
+                                <button class="btn btn-info w-100 text-white" onclick="loadPreview()">Tampilkan Preview</button>
+                                
+                                <button id="downloadPrintBtn" class="btn btn-secondary w-100 mt-2" style="display:none;" onclick="openDownloadLink()">⬇️ Download / Print File</button>
+                                
                                 <div id="previewMessage" class="mt-3"></div>
                             </div>
                             <div class="col-md-7">
@@ -158,9 +174,10 @@
 
     <script>
         // *** PENTING: GANTI DENGAN URL WEB APP APPS SCRIPT ANDA SETELAH DI-DEPLOY ***
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw5wrSONxqYpjPETGj2LGdSESMGkVhZghCPv07yyv_o9lOsPqK3CvPTHPtSE1BMp_lCSw/exec"; 
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbybZL4L_eZuzioyJDCvS9QnsOEqcvvgOIhjrnW_dluteC19Q1OGHbGP9AfuVEWHYmTbuw/exec"; 
         
         let siswaData = [];
+        let currentDownloadLink = ''; 
 
         // --- Fungsi Utama untuk Fetch Data ---
         async function fetchData(url, options = {}) {
@@ -180,7 +197,7 @@
             }
         }
 
-        // --- 1. Load Data Siswa (Dipanggil saat UI dimuat) ---
+        // --- 1. Load Data Siswa (Membuat Dropdown) ---
         async function loadSiswaList() {
             const url = `${APPS_SCRIPT_URL}?action=getSiswaList`;
             const result = await fetchData(url);
@@ -226,7 +243,8 @@
                     actionCell.appendChild(deleteBtn);
                 });
             } else {
-                selectUpload.innerHTML = `<option value="" disabled selected>${result.message}</option>`;
+                console.error(result.message); 
+                selectUpload.innerHTML = `<option value="" disabled selected>Error: ${result.message.substring(0, 40)}...</option>`;
                 tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">Error: ${result.message}</td></tr>`;
             }
         }
@@ -285,7 +303,7 @@
             if (result.success) {
                 messageDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
                 document.getElementById('addSiswaForm').reset();
-                loadSiswaList(); // Reload daftar siswa
+                loadSiswaList();
             } else {
                 messageDiv.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
             }
@@ -311,38 +329,55 @@
 
             if (result.success) {
                 messageDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
-                loadSiswaList(); // Reload daftar siswa
+                loadSiswaList();
             } else {
                 messageDiv.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
             }
         }
         
-        // --- 5. Handle Preview File ---
+        // --- 5. Handle Preview File (Memuat file berdasarkan tipe) ---
         async function loadPreview() {
             const previewSiswaSelect = document.getElementById('previewSiswaSelect');
             const folderId = previewSiswaSelect.value;
+            const fileType = document.querySelector('input[name="previewType"]:checked').value; // Ambil tipe file yang dipilih
             const previewFrame = document.getElementById('pdfPreviewFrame');
             const messageDiv = document.getElementById('previewMessage');
+            const downloadPrintBtn = document.getElementById('downloadPrintBtn');
             
+            downloadPrintBtn.style.display = 'none';
             if (!folderId) {
                 messageDiv.innerHTML = '<div class="alert alert-warning">Mohon pilih siswa terlebih dahulu.</div>';
                 previewFrame.src = "";
                 return;
             }
             
-            messageDiv.innerHTML = '<div class="alert alert-info">Mencari file PDF terbaru di folder siswa...</div>';
+            messageDiv.innerHTML = '<div class="alert alert-info">Mencari file PDF terbaru...</div>';
             previewFrame.src = ""; // Clear existing preview
 
-            const url = `${APPS_SCRIPT_URL}?action=getPreviewLink&folderId=${folderId}`;
+            // Kirim fileType ke Apps Script
+            const url = `${APPS_SCRIPT_URL}?action=getPreviewLink&folderId=${folderId}&fileType=${fileType}`;
             const result = await fetchData(url);
 
             if (result.success) {
-                // Tampilkan file di iframe. Menggunakan link embed Google
-                previewFrame.src = result.link;
-                messageDiv.innerHTML = `<div class="alert alert-success">Preview berhasil dimuat.</div>`;
+                previewFrame.src = result.previewLink;
+                currentDownloadLink = result.downloadLink; 
+                downloadPrintBtn.style.display = 'block';
+                
+                messageDiv.innerHTML = `<div class="alert alert-success">Preview ${fileType} berhasil dimuat.</div>`;
             } else {
                 previewFrame.src = "";
+                currentDownloadLink = '';
                 messageDiv.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+            }
+        }
+
+        // --- 6. Fungsi Download / Print ---
+        function openDownloadLink() {
+            if (currentDownloadLink) {
+                // Membuka link Drive asli di tab baru
+                window.open(currentDownloadLink, '_blank');
+            } else {
+                document.getElementById('previewMessage').innerHTML = '<div class="alert alert-warning">File belum dimuat atau tidak ditemukan.</div>';
             }
         }
 
