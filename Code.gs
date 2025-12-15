@@ -33,7 +33,7 @@ function doPost(e) {
       // >>> PENGECEKAN KESALAHAN UPLOAD (SERVER-SIDE CHECK) <<<
       let missingParam = [];
       if (!folderId || folderId.trim() === "") missingParam.push("Folder ID (Kolom C di Sheet kosong)");
-      // Cek File PDF dari sisi server (akan terpicu jika file gagal dilampirkan dari browser)
+      // Cek File PDF dari sisi server
       if (!fileBlob) missingParam.push("File PDF"); 
       
       if (missingParam.length > 0) {
