@@ -1,10 +1,12 @@
 // =================================================================
 // 1. KONFIGURASI GLOBAL
 // =================================================================
-const SHEET_ID = "1lAO4IwLbgP6hew3inMvzQo8W9d7K1NlNI39cTNzKPdE"; // 🔴 CONTOH: "1lAO4IwLbgP6hew3inMvzQo8W9d7K1NlNI39cTNzKPdE"
-const PARENT_FOLDER_ID = "1Og56eOesHTBCJhwTKhAGMYwAJpyAvFHA"; // 🔴 CONTOH: "1Og56eOesHTBCJhwTKhAGMYwAJpyAvFHA"
+// ID Spreadsheet sudah dikonfirmasi
+const SHEET_ID = "1lAO4IwLbgP6hew3inMvzQo8W9d7K1NlNI39cTNzKPdE"; 
+// ID Folder Induk sudah dikonfirmasi dari link terakhir Anda
+const PARENT_FOLDER_ID = "16aw4C5qTwJmNZw_FQe1Vcnm-M1xqmjbk"; 
 const SHEET_NAME = "Data Siswa";
-const MAX_ROWS_TO_LOAD = 500; // Batasan untuk efisiensi loading data
+const MAX_ROWS_TO_LOAD = 500; 
 // =================================================================
 // 2. WEB SERVICE HANDLERS (doGet & doPost)
 // =================================================================
@@ -51,18 +53,16 @@ function doPost(e) {
       if (!folderId || folderId.trim() === "") throw new Error("Folder ID hilang. Data Siswa mungkin tidak lengkap.");
       if (!fileBlob || (Array.isArray(fileBlob) && fileBlob.length === 0)) throw new Error("File PDF tidak ditemukan atau kosong.");
 
-      // Ambil objek Blob yang sebenarnya
+      // Ambil objek Blob yang sebenarnya (PENTING untuk upload)
       const uploadedBlob = Array.isArray(fileBlob) ? fileBlob[0] : fileBlob; 
       
       if (typeof uploadedBlob.setName !== 'function') {
            throw new Error("Objek file tidak valid. Pastikan file terpilih dan Apps Script di-deploy dengan otorisasi Drive yang benar.");
       }
 
-      // 1. Set nama file lengkap dengan ekstensi PDF dan timestamp
       const finalFileName = `${fileNamePrefix}_${Date.now()}.pdf`;
       const namedBlob = uploadedBlob.setName(finalFileName);
 
-      // 2. Simpan file ke Drive
       const folder = DriveApp.getFolderById(folderId);
       const file = folder.createFile(namedBlob); 
 
@@ -96,39 +96,29 @@ function doPost(e) {
 // 3. UTILITY FUNCTIONS (Sheet & Drive Management)
 // =================================================================
 
-/**
- * Mengambil daftar siswa, membuat folder jika belum ada, dan mengupdate Sheet.
- * @returns {Array<Object>} Array objek siswa.
- */
 function getSiswaList() {
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
-  // Ambil hanya data yang benar-benar berisi (hingga MAX_ROWS_TO_LOAD)
   const range = sheet.getRange(1, 1, Math.min(sheet.getLastRow(), MAX_ROWS_TO_LOAD), sheet.getLastColumn());
   const data = range.getValues();
   if (data.length <= 1) return [];
 
-  const headers = data.shift(); // Hapus header
+  const headers = data.shift(); 
 
   const siswaList = data.map((row, index) => {
-    // Baris di Sheet (1-based), index di array (0-based)
-    const rowIndex = index + 2; // +2 karena header dan array 0-based
+    const rowIndex = index + 2; 
     const nis = row[0] ? String(row[0]).trim() : '';
     const name = row[1] ? String(row[1]).trim() : '';
     let folderId = row[2] ? String(row[2]).trim() : '';
 
-    if (!name || !nis) return null; // Skip baris kosong
+    if (!name || !nis) return null; 
 
-    // Cek/Buat Folder ID jika kosong
     if (!folderId) {
       try {
         folderId = createFolderForSiswa(name);
-        // Update Sheet jika Folder ID baru dibuat
         if (folderId) {
           sheet.getRange(`C${rowIndex}`).setValue(folderId);
         }
       } catch (e) {
-        Logger.log(`Gagal membuat folder untuk ${name}: ${e.message}`);
-        // Jika gagal, set folderId ke null agar tidak digunakan
         folderId = null; 
       }
     }
@@ -137,16 +127,13 @@ function getSiswaList() {
       nis: nis,
       name: name,
       folderId: folderId,
-      rowIndex: rowIndex // Simpan index baris untuk operasi hapus
+      rowIndex: rowIndex 
     };
-  }).filter(siswa => siswa && siswa.folderId); // Filter data yang tidak lengkap atau gagal dibuat folder
+  }).filter(siswa => siswa && siswa.folderId); 
 
   return siswaList;
 }
 
-/**
- * Menambahkan data siswa baru ke Google Sheet dan membuat folder.
- */
 function tambahSiswa(nis, name) {
   if (!nis || !name) {
     return { success: false, message: "NIS dan Nama Siswa tidak boleh kosong." };
@@ -156,20 +143,17 @@ function tambahSiswa(nis, name) {
   const siswaNameClean = name.trim();
   const nisClean = String(nis).trim();
 
-  // Cek duplikasi
   const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).getValues();
   if (data.some(row => String(row[0]).trim() === nisClean || String(row[1]).trim() === siswaNameClean)) {
     return { success: false, message: `Siswa dengan NIS ${nisClean} atau nama ${siswaNameClean} sudah ada.` };
   }
 
-  // Buat folder Drive
   const folderId = createFolderForSiswa(siswaNameClean);
   
   if (!folderId) {
       throw new Error(`Gagal membuat folder Drive untuk ${siswaNameClean}. Cek ID folder induk.`);
   }
 
-  // Tambahkan data ke Sheet (Kolom A: NIS, B: Nama, C: Folder ID)
   sheet.appendRow([nisClean, siswaNameClean, folderId]);
 
   return { 
@@ -179,11 +163,8 @@ function tambahSiswa(nis, name) {
   };
 }
 
-/**
- * Menghapus baris siswa dari Google Sheet berdasarkan index baris.
- */
 function hapusSiswa(rowIndex) {
-  if (rowIndex < 2) { // Baris 1 adalah header
+  if (rowIndex < 2) { 
     return { success: false, message: "Index baris tidak valid untuk dihapus." };
   }
   
@@ -199,11 +180,7 @@ function hapusSiswa(rowIndex) {
   };
 }
 
-/**
- * Mencari file PDF terbaru (Ledger/Rapor) dalam folder siswa.
- */
 function getPreviewLink(folderId, fileType) {
-  // ... (Fungsi ini tetap sama dengan yang sudah di-sharing sebelumnya) ...
   try {
     const folder = DriveApp.getFolderById(folderId);
     const searchString = `title contains '${fileType}' and mimeType = 'application/pdf'`;
@@ -245,11 +222,7 @@ function getPreviewLink(folderId, fileType) {
   }
 }
 
-/**
- * Membuat folder Drive baru untuk siswa jika belum ada.
- */
 function createFolderForSiswa(siswaName) {
-  // ... (Fungsi ini tetap sama dengan yang sudah di-sharing sebelumnya) ...
   try {
     const parentFolder = DriveApp.getFolderById(PARENT_FOLDER_ID);
     const newFolderName = siswaName.trim();
@@ -263,6 +236,7 @@ function createFolderForSiswa(siswaName) {
     return newFolder.getId();
   } catch (e) {
     Logger.log("Gagal membuat/mendapatkan folder: " + e.message);
-    return null; // Kembalikan null jika gagal
+    // Ini mungkin terjadi jika PARENT_FOLDER_ID salah atau izin kurang
+    return null; 
   }
 }
