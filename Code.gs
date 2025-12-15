@@ -1,10 +1,11 @@
 // =================================================================
 // 1. KONFIGURASI GLOBAL
 // =================================================================
-const SHEET_ID = "1lAO4IwLbgP6hew3inMvzQo8W9d7K1NlNI39cTNzKPdE"; // ID Sheet Anda
-// GANTI DENGAN ID FOLDER DRIVE INDUK ANDA YANG ASLI (Folder Rapor tempat folder siswa tersimpan)
+const SHEET_ID = "1lAO4IwLbgP6hew3inMvzQo8W9d7K1NlNI39cTNzKPdE"; 
+
+// ✅ INI ADALAH ID FOLDER INDUK YANG SUDAH TERKONFIRMASI
 const PARENT_FOLDER_ID = "1Og56eOesHTBCJhwTKhAGMYwAJpyAvFHA"; 
-// Nama sheet yang berisi data siswa
+
 const SHEET_NAME = "Data Siswa"; 
 
 // =================================================================
@@ -29,19 +30,18 @@ function doPost(e) {
       const fileName = siswaName.replace(/ /g, '_') + "_" + fileType + "_" + Date.now(); 
       const fileBlob = e.parameters.file;
       
-      // >>> PENGECEKAN DEBUGGING ROBUST UNTUK MENGATASI ERROR UPLOAD TERAKHIR <<<
+      // >>> PENGECEKAN KESALAHAN UPLOAD <<<
       let missingParam = [];
       if (!folderId || folderId.trim() === "") missingParam.push("Folder ID (Kolom C di Sheet kosong)");
       if (!fileBlob) missingParam.push("File PDF");
       
       if (missingParam.length > 0) {
-        // Melemparkan error yang lebih spesifik ke front-end
         throw new Error("Parameter upload hilang: " + missingParam.join(" dan "));
       }
-      // >>> AKHIR PENGECEKAN DEBUGGING <<<
+      // >>> AKHIR PENGECEKAN <<<
       
-      // Simpan file ke Drive
-      const folder = DriveApp.getFolderById(folderId);
+      // Simpan file ke Drive (menggunakan folderId siswa spesifik)
+      const folder = DriveApp.getFolderById(folderId); 
       const file = folder.createFile(fileBlob[0].setName(fileName + '.pdf'));
       
       result = { 
@@ -140,6 +140,7 @@ function tambahSiswa(nama, kelas) {
     throw new Error("Nama dan Kelas Siswa wajib diisi.");
   }
   
+  // PARENT_FOLDER_ID digunakan di sini untuk membuat folder baru
   const parentFolder = DriveApp.getFolderById(PARENT_FOLDER_ID);
   const newFolder = parentFolder.createFolder(`${kelas} - ${nama}`);
   const newFolderId = newFolder.getId();
