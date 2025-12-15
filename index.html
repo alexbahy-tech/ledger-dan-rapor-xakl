@@ -124,7 +124,7 @@
                                 <div id="previewMessage" class="mt-3"></div>
                             </div>
                             <div class="col-md-7">
-                                <p class="text-muted mt-3 mt-md-0">Area Preview (Hanya menampilkan file PDF terbaru di folder siswa):</p>
+                                <p class="text-muted mt-3 mt-md-0">Area Preview:</p>
                                 <iframe id="pdfPreviewFrame" class="preview-iframe" frameborder="0" allowfullscreen></iframe>
                             </div>
                         </div>
@@ -173,7 +173,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // *** PENTING: GANTI DENGAN URL WEB APP APPS SCRIPT ANDA SETELAH DI-DEPLOY ***
+        // *** PENTING: GANTI DENGAN URL WEB APP APPS SCRIPT ANDA YANG SUDAH DIOTORISASI (berakhir /exec) ***
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbybZL4L_eZuzioyJDCvS9QnsOEqcvvgOIhjrnW_dluteC19Q1OGHbGP9AfuVEWHYmTbuw/exec"; 
         
         let siswaData = [];
@@ -188,11 +188,13 @@
                 }
                 const result = await response.json();
                 if (!result.success) {
+                    // Menangkap pesan error dari Apps Script (termasuk error Otorisasi)
                     throw new Error(result.message || "Operasi gagal di server Apps Script.");
                 }
                 return result;
             } catch (error) {
                 console.error("Fetch Error:", error);
+                // Mengirim pesan error yang lebih jelas ke front-end
                 return { success: false, message: `Koneksi gagal atau error: ${error.message}` };
             }
         }
@@ -243,9 +245,15 @@
                     actionCell.appendChild(deleteBtn);
                 });
             } else {
-                console.error(result.message); 
-                selectUpload.innerHTML = `<option value="" disabled selected>Error: ${result.message.substring(0, 40)}...</option>`;
-                tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">Error: ${result.message}</td></tr>`;
+                // Menampilkan error di dropdown dan tabel jika gagal
+                const errorMessage = result.message; 
+                selectUpload.innerHTML = `<option value="" disabled selected>Error: ${errorMessage.substring(0, 40)}...</option>`;
+                tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">Gagal memuat: ${errorMessage}</td></tr>`;
+                
+                // Jika error adalah otorisasi, berikan peringatan keras
+                if (errorMessage.includes("izin untuk memanggil SpreadsheetApp")) {
+                    alert("FATAL ERROR Otorisasi: Anda harus Deploy Ulang Apps Script dan mengklik 'Review permissions' untuk memberikan izin akses ke Google Sheet.");
+                }
             }
         }
         
@@ -339,12 +347,14 @@
         async function loadPreview() {
             const previewSiswaSelect = document.getElementById('previewSiswaSelect');
             const folderId = previewSiswaSelect.value;
-            const fileType = document.querySelector('input[name="previewType"]:checked').value; // Ambil tipe file yang dipilih
+            const fileType = document.querySelector('input[name="previewType"]:checked').value; 
             const previewFrame = document.getElementById('pdfPreviewFrame');
             const messageDiv = document.getElementById('previewMessage');
             const downloadPrintBtn = document.getElementById('downloadPrintBtn');
             
             downloadPrintBtn.style.display = 'none';
+            currentDownloadLink = '';
+            
             if (!folderId) {
                 messageDiv.innerHTML = '<div class="alert alert-warning">Mohon pilih siswa terlebih dahulu.</div>';
                 previewFrame.src = "";
@@ -352,9 +362,8 @@
             }
             
             messageDiv.innerHTML = '<div class="alert alert-info">Mencari file PDF terbaru...</div>';
-            previewFrame.src = ""; // Clear existing preview
+            previewFrame.src = ""; 
 
-            // Kirim fileType ke Apps Script
             const url = `${APPS_SCRIPT_URL}?action=getPreviewLink&folderId=${folderId}&fileType=${fileType}`;
             const result = await fetchData(url);
 
@@ -366,7 +375,6 @@
                 messageDiv.innerHTML = `<div class="alert alert-success">Preview ${fileType} berhasil dimuat.</div>`;
             } else {
                 previewFrame.src = "";
-                currentDownloadLink = '';
                 messageDiv.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
             }
         }
@@ -374,7 +382,6 @@
         // --- 6. Fungsi Download / Print ---
         function openDownloadLink() {
             if (currentDownloadLink) {
-                // Membuka link Drive asli di tab baru
                 window.open(currentDownloadLink, '_blank');
             } else {
                 document.getElementById('previewMessage').innerHTML = '<div class="alert alert-warning">File belum dimuat atau tidak ditemukan.</div>';

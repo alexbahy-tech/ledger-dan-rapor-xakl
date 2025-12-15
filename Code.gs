@@ -1,11 +1,12 @@
 // =================================================================
 // 1. KONFIGURASI GLOBAL
 // =================================================================
-const SHEET_ID = "1lAO4IwLbgP6hew3inMvzQo8W9d7K1NlNI39cTNzKPdE"; // Sheet ID Anda
-// Ganti dengan ID folder induk Drive Anda (misalnya: "ID folder siswa")
+const SHEET_ID = "1lAO4IwLbgP6hew3inMvzQo8W9d7K1NlNI39cTNzKPdE"; // ID Sheet Anda (Sudah Dikonfirmasi)
+// GANTI DENGAN ID FOLDER DRIVE INDUK ANDA YANG ASLI 
+// (Tempat semua folder siswa berada. JANGAN gunakan placeholder!)
 const PARENT_FOLDER_ID = "1Og56eOesHTBCJhwTKhAGMYwAJpyAvFHA"; 
 // Nama sheet yang berisi data siswa
-const SHEET_NAME = "Data Siswa"; 
+const SHEET_NAME = "Data Siswa"; // (Sudah Dikonfirmasi)
 
 // =================================================================
 // 2. WEB SERVICE HANDLERS (doGet & doPost)
@@ -23,16 +24,16 @@ function doPost(e) {
     // --- OPERASI UPLOAD FILE ---
     if (action === "uploadFile") {
       const folderId = e.parameter.folderId;
-      const fileType = e.parameter.fileType;
+      const fileType = e.parameter.fileType; 
       const siswaName = e.parameter.siswaName;
-      const fileName = siswaName + "_" + fileType + "_" + Date.now();
+      // Nama file mencakup tipe file untuk filter: (NAMA_SISWA_LEDGER_TIMESTAMP)
+      const fileName = siswaName.replace(/ /g, '_') + "_" + fileType + "_" + Date.now(); 
       const fileBlob = e.parameters.file;
       
       if (!folderId || !fileBlob) {
         throw new Error("Folder ID atau File tidak ditemukan.");
       }
       
-      // Simpan file ke Drive
       const folder = DriveApp.getFolderById(folderId);
       const file = folder.createFile(fileBlob[0].setName(fileName + '.pdf'));
       
@@ -43,7 +44,6 @@ function doPost(e) {
       };
       
     } else {
-      // Ambil data JSON untuk CRUD
       const data = JSON.parse(e.postData.contents);
     
       switch (data.action) {
@@ -81,7 +81,7 @@ function doGet(e) {
         result = getSiswaList();
         break;
       case "getPreviewLink":
-        result = getPreviewLink(e.parameter.folderId);
+        result = getPreviewLink(e.parameter.folderId, e.parameter.fileType); 
         break;
       default:
         result = { success: false, message: "Aksi tidak dikenali." };
@@ -100,8 +100,11 @@ function doGet(e) {
 // 3. FUNGSI DATA SISWA (CRUD & Read)
 // =================================================================
 
+/**
+ * Mengambil daftar siswa dari Google Sheet
+ */
 function getSiswaList() {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const ss = SpreadsheetApp.openById(SHEET_ID); 
   const sheet = ss.getSheetByName(SHEET_NAME);
   
   if (!sheet) {
@@ -129,12 +132,10 @@ function tambahSiswa(nama, kelas) {
     throw new Error("Nama dan Kelas Siswa wajib diisi.");
   }
   
-  // 1. Buat folder baru di Drive
   const parentFolder = DriveApp.getFolderById(PARENT_FOLDER_ID);
   const newFolder = parentFolder.createFolder(`${kelas} - ${nama}`);
   const newFolderId = newFolder.getId();
   
-  // 2. Tambahkan data ke Google Sheet
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const sheet = ss.getSheetByName(SHEET_NAME);
   
@@ -155,9 +156,9 @@ function hapusSiswa(rowIndex) {
 }
 
 /**
- * Mendapatkan link preview PDF terbaru dan link download
+ * Mendapatkan link preview PDF terbaru berdasarkan fileType (Ledger/Rapor)
  */
-function getPreviewLink(folderId) {
+function getPreviewLink(folderId, fileType) {
   try {
     const folder = DriveApp.getFolderById(folderId);
     
@@ -165,26 +166,28 @@ function getPreviewLink(folderId) {
     let latestFile = null;
     let latestTime = 0;
     
+    const searchKeyword = fileType.toUpperCase(); 
+    
     while (files.hasNext()) {
       const file = files.next();
-      if (file.getLastUpdated().getTime() > latestTime) {
-        latestTime = file.getLastUpdated().getTime();
-        latestFile = file;
+      const fileName = file.getName().toUpperCase();
+      
+      if (fileName.includes(searchKeyword)) {
+          if (file.getLastUpdated().getTime() > latestTime) {
+              latestTime = file.getLastUpdated().getTime();
+              latestFile = file;
+          }
       }
     }
     
     if (latestFile) {
-      // Pastikan file Drive yang diakses di-setting 'Anyone with the link can view'
-      // Agar bisa di-preview/download oleh siapapun yang mengakses Web App
       return { 
         success: true, 
-        // Link untuk iframe (embed view)
         previewLink: latestFile.getUrl().replace("view", "preview"),
-        // Link Drive Asli (untuk download/print)
         downloadLink: latestFile.getUrl()
       };
     } else {
-      return { success: false, message: "Tidak ada file PDF ditemukan di folder ini." };
+      return { success: false, message: `Tidak ada file PDF jenis ${fileType} ditemukan di folder ini.` };
     }
     
   } catch (error) {
