@@ -12,7 +12,8 @@ const MAX_ROWS_TO_LOAD = 500;
 // =================================================================
 
 function doGet(e) {
-  const action = e.parameter.action;
+  // FIX: Mengatasi TypeError: Cannot read properties of undefined (reading 'parameter')
+  const action = (e && e.parameter) ? e.parameter.action : undefined;
   let result;
 
   try {
@@ -51,9 +52,11 @@ function doPost(e) {
       const fileBlob = e.parameters.file;
 
       if (!folderId || folderId.trim() === "") throw new Error("Folder ID hilang. Data Siswa mungkin tidak lengkap.");
-      if (!fileBlob || (Array.isArray(fileBlob) && fileBlob.length === 0)) throw new Error("File PDF tidak ditemukan atau kosong.");
+      if (!fileBlob || (Array.isArray(fileBlob) && fileBlob.length === 0)) {
+         // FIX: Menggunakan throw Error untuk pesan yang lebih jelas
+         throw new Error("File PDF tidak ditemukan atau kosong.");
+      }
 
-      // Ambil objek Blob yang sebenarnya (PENTING untuk upload)
       const uploadedBlob = Array.isArray(fileBlob) ? fileBlob[0] : fileBlob; 
       
       if (typeof uploadedBlob.setName !== 'function') {
@@ -77,8 +80,14 @@ function doPost(e) {
       result = tambahSiswa(nis, name);
       
     } else if (action === "hapusSiswa") {
-      const { rowIndex } = e.parameter;
-      result = hapusSiswa(parseInt(rowIndex));
+      const rowIndexRaw = e.parameter.rowIndex;
+      const rowIndex = parseInt(rowIndexRaw); 
+      
+      // FIX: Validasi ketat untuk menghindari error getRange(null, number)
+      if (isNaN(rowIndex) || rowIndex < 2) {
+          throw new Error("Gagal menghapus: Index baris tidak valid atau data tidak ditemukan.");
+      }
+      result = hapusSiswa(rowIndex);
 
     } else {
       throw new Error("Aksi tidak dikenal.");
@@ -98,6 +107,8 @@ function doPost(e) {
 
 function getSiswaList() {
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
+  if (!sheet) throw new Error(`Sheet dengan nama "${SHEET_NAME}" tidak ditemukan.`); // Fail fast
+    
   const range = sheet.getRange(1, 1, Math.min(sheet.getLastRow(), MAX_ROWS_TO_LOAD), sheet.getLastColumn());
   const data = range.getValues();
   if (data.length <= 1) return [];
@@ -112,6 +123,7 @@ function getSiswaList() {
 
     if (!name || !nis) return null; 
 
+    // Auto-create folder ID jika belum ada
     if (!folderId) {
       try {
         folderId = createFolderForSiswa(name);
@@ -140,6 +152,8 @@ function tambahSiswa(nis, name) {
   }
 
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
+  if (!sheet) throw new Error(`Sheet dengan nama "${SHEET_NAME}" tidak ditemukan.`); 
+    
   const siswaNameClean = name.trim();
   const nisClean = String(nis).trim();
 
@@ -164,12 +178,19 @@ function tambahSiswa(nis, name) {
 }
 
 function hapusSiswa(rowIndex) {
+  // Check ini mungkin sudah dilakukan di doPost, tapi sebagai safeguard
   if (rowIndex < 2) { 
     return { success: false, message: "Index baris tidak valid untuk dihapus." };
   }
   
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
+  if (!sheet) throw new Error(`Sheet dengan nama "${SHEET_NAME}" tidak ditemukan.`); 
+    
+  // Pastikan baris yang akan dihapus tidak kosong
   const siswaName = sheet.getRange(rowIndex, 2).getValue();
+  if (!siswaName) {
+      throw new Error(`Baris ${rowIndex} tidak memiliki data siswa untuk dihapus.`);
+  }
   
   sheet.deleteRow(rowIndex);
   
@@ -181,8 +202,18 @@ function hapusSiswa(rowIndex) {
 }
 
 function getPreviewLink(folderId, fileType) {
+  // FIX: Validasi folderId untuk mengatasi error "Invalid argument: id"
+  if (!folderId || typeof folderId !== 'string' || folderId.trim() === "") {
+      return {
+        success: false,
+        message: "Error Data: Folder ID siswa tidak valid atau kosong. Mohon periksa data sheet.",
+        previewLink: "",
+        downloadLink: ""
+      };
+  }
+    
   try {
-    const folder = DriveApp.getFolderById(folderId);
+    const folder = DriveApp.getFolderById(folderId); // ID sudah terjamin valid
     const searchString = `title contains '${fileType}' and mimeType = 'application/pdf'`;
     const files = folder.searchFiles(searchString);
 
@@ -215,7 +246,7 @@ function getPreviewLink(folderId, fileType) {
     Logger.log("Error getPreviewLink: " + error.message);
     return {
       success: false,
-      message: "Error Server: Gagal mencari file. Pastikan Folder ID Siswa valid.",
+      message: "Error Server: Gagal mencari file. Pastikan Folder ID Siswa valid dan Anda punya izin.",
       previewLink: "",
       downloadLink: ""
     };
