@@ -174,7 +174,7 @@
 
     <script>
         // 🔴 PENTING: GANTI DENGAN URL WEB APP APPS SCRIPT ANDA YANG SUDAH DIOTORISASI (berakhir /exec)
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxXl9YYEWtCyz7XGbh-xNeQU5bLl1e6JlVXN4d0i4spLegSGHG5c6b7J1d7me1UNM50KQ/exec"; 
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxrIgQYv4vE7kUFpxRNdjfRDwq9iFgCEbkYqXmgt0R1dYBO8172lejAj_4ils2sPzhwLQ/exec"; 
         
         let siswaData = [];
         let currentDownloadLink = ''; 
@@ -269,6 +269,13 @@
             const siswaSelect = document.getElementById('siswaSelect');
             const selectedOption = siswaSelect.options[siswaSelect.selectedIndex];
             
+            // 🛑 VALIDASI KLIEN-SIDE EKSPLISIT UNTUK MENCEGAH ERROR "File PDF Hilang"
+            if (!fileInput) {
+                messageDiv.innerHTML = '<div class="alert alert-danger">Mohon pilih file PDF dari komputer Anda sebelum mengklik Upload.</div>';
+                return; 
+            }
+            // 🛑 AKHIR VALIDASI TAMBAHAN
+
             // Cek apakah option yang dipilih adalah placeholder atau disabled
             if (!selectedOption || selectedOption.disabled || selectedOption.value === "") {
                 messageDiv.innerHTML = '<div class="alert alert-danger">Pilih siswa yang valid (pastikan FOLDER ID siswa tidak kosong di Google Sheet).</div>';

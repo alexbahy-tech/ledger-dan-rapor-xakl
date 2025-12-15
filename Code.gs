@@ -3,7 +3,7 @@
 // =================================================================
 const SHEET_ID = "1lAO4IwLbgP6hew3inMvzQo8W9d7K1NlNI39cTNzKPdE"; 
 
-// ✅ INI ADALAH ID FOLDER INDUK YANG SUDAH TERKONFIRMASI
+// ✅ ID FOLDER INDUK YANG SUDAH TERKONFIRMASI
 const PARENT_FOLDER_ID = "1Og56eOesHTBCJhwTKhAGMYwAJpyAvFHA"; 
 
 const SHEET_NAME = "Data Siswa"; 
@@ -30,10 +30,11 @@ function doPost(e) {
       const fileName = siswaName.replace(/ /g, '_') + "_" + fileType + "_" + Date.now(); 
       const fileBlob = e.parameters.file;
       
-      // >>> PENGECEKAN KESALAHAN UPLOAD <<<
+      // >>> PENGECEKAN KESALAHAN UPLOAD (SERVER-SIDE CHECK) <<<
       let missingParam = [];
       if (!folderId || folderId.trim() === "") missingParam.push("Folder ID (Kolom C di Sheet kosong)");
-      if (!fileBlob) missingParam.push("File PDF");
+      // Cek File PDF dari sisi server (akan terpicu jika file gagal dilampirkan dari browser)
+      if (!fileBlob) missingParam.push("File PDF"); 
       
       if (missingParam.length > 0) {
         throw new Error("Parameter upload hilang: " + missingParam.join(" dan "));
