@@ -1,12 +1,11 @@
 // =================================================================
 // 1. KONFIGURASI GLOBAL
 // =================================================================
-const SHEET_ID = "1lAO4IwLbgP6hew3inMvzQo8W9d7K1NlNI39cTNzKPdE"; // ID Sheet Anda (Sudah Dikonfirmasi)
-// GANTI DENGAN ID FOLDER DRIVE INDUK ANDA YANG ASLI 
-// (Tempat semua folder siswa berada. JANGAN gunakan placeholder!)
+const SHEET_ID = "1lAO4IwLbgP6hew3inMvzQo8W9d7K1NlNI39cTNzKPdE"; // ID Sheet Anda
+// GANTI DENGAN ID FOLDER DRIVE INDUK ANDA YANG ASLI (Folder Rapor tempat folder siswa tersimpan)
 const PARENT_FOLDER_ID = "1Og56eOesHTBCJhwTKhAGMYwAJpyAvFHA"; 
 // Nama sheet yang berisi data siswa
-const SHEET_NAME = "Data Siswa"; // (Sudah Dikonfirmasi)
+const SHEET_NAME = "Data Siswa"; 
 
 // =================================================================
 // 2. WEB SERVICE HANDLERS (doGet & doPost)
@@ -30,10 +29,18 @@ function doPost(e) {
       const fileName = siswaName.replace(/ /g, '_') + "_" + fileType + "_" + Date.now(); 
       const fileBlob = e.parameters.file;
       
-      if (!folderId || !fileBlob) {
-        throw new Error("Folder ID atau File tidak ditemukan.");
-      }
+      // >>> PENGECEKAN DEBUGGING ROBUST UNTUK MENGATASI ERROR UPLOAD TERAKHIR <<<
+      let missingParam = [];
+      if (!folderId || folderId.trim() === "") missingParam.push("Folder ID (Kolom C di Sheet kosong)");
+      if (!fileBlob) missingParam.push("File PDF");
       
+      if (missingParam.length > 0) {
+        // Melemparkan error yang lebih spesifik ke front-end
+        throw new Error("Parameter upload hilang: " + missingParam.join(" dan "));
+      }
+      // >>> AKHIR PENGECEKAN DEBUGGING <<<
+      
+      // Simpan file ke Drive
       const folder = DriveApp.getFolderById(folderId);
       const file = folder.createFile(fileBlob[0].setName(fileName + '.pdf'));
       
@@ -44,6 +51,7 @@ function doPost(e) {
       };
       
     } else {
+      // Ambil data JSON untuk CRUD
       const data = JSON.parse(e.postData.contents);
     
       switch (data.action) {
@@ -121,7 +129,7 @@ function getSiswaList() {
     rowIndex: index + 2, 
     nama: row[0], 
     kelas: row[1], 
-    folderId: row[2] 
+    folderId: row[2] // Nilai ini yang harus valid untuk upload
   }));
   
   return { success: true, data: siswaList };

@@ -174,7 +174,7 @@
 
     <script>
         // *** PENTING: GANTI DENGAN URL WEB APP APPS SCRIPT ANDA YANG SUDAH DIOTORISASI (berakhir /exec) ***
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEysF9zwyw5fROo8XqCJs283PskEkhFp6bt5vgCP44EVGqsa3cuBcWKHV2x-BMmu3HNA/exec"; 
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-ML2Kvtn3ut7SmhzWUIbmp4bpLceXNaOe9yw-3FPdumkBFNS0d3rGey9TpkTwGLV7DA/exec"; 
         
         let siswaData = [];
         let currentDownloadLink = ''; 
@@ -188,7 +188,7 @@
                 }
                 const result = await response.json();
                 if (!result.success) {
-                    // Menangkap pesan error dari Apps Script (termasuk error Otorisasi)
+                    // Menangkap pesan error dari Apps Script (termasuk error Folder ID / File)
                     throw new Error(result.message || "Operasi gagal di server Apps Script.");
                 }
                 return result;
@@ -225,6 +225,13 @@
                     // Dropdown Upload
                     const optionUpload = new Option(optionText, siswa.folderId);
                     optionUpload.setAttribute('data-siswa-name', siswa.nama);
+                    
+                    // Menonaktifkan opsi jika FOLDER_ID kosong
+                    if (!siswa.folderId || siswa.folderId.trim() === "") {
+                        optionUpload.disabled = true;
+                        optionUpload.textContent += " (Folder ID Kosong!)";
+                    }
+
                     selectUpload.add(optionUpload);
                     
                     // Dropdown Preview
@@ -245,15 +252,10 @@
                     actionCell.appendChild(deleteBtn);
                 });
             } else {
-                // Menampilkan error di dropdown dan tabel jika gagal
+                // Menampilkan error jika gagal memuat data
                 const errorMessage = result.message; 
                 selectUpload.innerHTML = `<option value="" disabled selected>Error: ${errorMessage.substring(0, 40)}...</option>`;
                 tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">Gagal memuat: ${errorMessage}</td></tr>`;
-                
-                // Jika error adalah otorisasi, berikan peringatan keras
-                if (errorMessage.includes("izin untuk memanggil SpreadsheetApp")) {
-                    alert("FATAL ERROR Otorisasi: Anda harus Deploy Ulang Apps Script dan mengklik 'Review permissions' untuk memberikan izin akses ke Google Sheet.");
-                }
             }
         }
         
@@ -267,6 +269,12 @@
             const siswaSelect = document.getElementById('siswaSelect');
             const selectedOption = siswaSelect.options[siswaSelect.selectedIndex];
             
+            // Cek apakah option yang dipilih adalah placeholder atau disabled
+            if (!selectedOption || selectedOption.disabled) {
+                messageDiv.innerHTML = '<div class="alert alert-danger">Pilih siswa dengan FOLDER ID yang valid atau pastikan FOLDER ID tidak kosong di Google Sheet.</div>';
+                return;
+            }
+
             const folderId = selectedOption.value;
             const siswaName = selectedOption.getAttribute('data-siswa-name');
             const fileType = document.querySelector('input[name="fileType"]:checked').value;
@@ -286,6 +294,7 @@
                 messageDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
                 document.getElementById('uploadForm').reset();
             } else {
+                // Error spesifik dari Code.gs (e.g., Parameter upload hilang: Folder ID) akan ditampilkan di sini
                 messageDiv.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
             }
         });
