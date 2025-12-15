@@ -3,8 +3,8 @@
 // =================================================================
 // ID Spreadsheet sudah dikonfirmasi
 const SHEET_ID = "1lAO4IwLbgP6hew3inMvzQo8W9d7K1NlNI39cTNzKPdE"; 
-// ID Folder Induk sudah dikonfirmasi dari link terakhir Anda
-const PARENT_FOLDER_ID = "16aw4C5qTwJmNZw_FQe1Vcnm-M1xqmjbk"; 
+// ID Folder Induk (Rapor Semester Ganjil) sudah dikonfirmasi
+const PARENT_FOLDER_ID = "1Og56eOesHTBCJhwTKhAGMYwAJpyAvFHA"; 
 const SHEET_NAME = "Data Siswa";
 const MAX_ROWS_TO_LOAD = 500; 
 // =================================================================
@@ -236,7 +236,6 @@ function createFolderForSiswa(siswaName) {
     return newFolder.getId();
   } catch (e) {
     Logger.log("Gagal membuat/mendapatkan folder: " + e.message);
-    // Ini mungkin terjadi jika PARENT_FOLDER_ID salah atau izin kurang
     return null; 
   }
 }
