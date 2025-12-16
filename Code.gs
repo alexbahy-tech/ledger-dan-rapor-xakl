@@ -1,272 +1,161 @@
-// =================================================================
-// 1. KONFIGURASI GLOBAL
-// =================================================================
-// ID Spreadsheet sudah dikonfirmasi
-const SHEET_ID = "1lAO4IwLbgP6hew3inMvzQo8W9d7K1NlNI39cTNzKPdE"; 
-// ID Folder Induk (Rapor Semester Ganjil) sudah dikonfirmasi
-const PARENT_FOLDER_ID = "1Og56eOesHTBCJhwTKhAGMYwAJpyAvFHA"; 
-const SHEET_NAME = "Data Siswa";
-const MAX_ROWS_TO_LOAD = 500; 
-// =================================================================
-// 2. WEB SERVICE HANDLERS (doGet & doPost)
-// =================================================================
+/**
+ * SISTEM ARSIP KURIKULUM - BACKEND
+ * Fitur: Upload, Monitoring, Tambah/Hapus Siswa
+ */
 
-function doGet(e) {
-  // FIX: Mengatasi TypeError: Cannot read properties of undefined (reading 'parameter')
-  const action = (e && e.parameter) ? e.parameter.action : undefined;
-  let result;
-
-  try {
-    if (action === "getSiswaList") {
-      result = { success: true, data: getSiswaList() };
-    } else if (action === "getPreviewLink") {
-      const folderId = e.parameter.folderId;
-      const fileType = e.parameter.fileType;
-      result = getPreviewLink(folderId, fileType);
-    } else {
-      return HtmlService.createTemplateFromFile('Index').evaluate()
-        .setTitle('Pusat Data Ledger & Rapor')
-        .setSandboxMode(HtmlService.SandboxMode.IFRAME);
-    }
-  } catch (error) {
-    result = { success: false, message: error.message };
-  }
-
-  if (action) {
-    return ContentService.createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
+// --- KONFIGURASI ---
+var SS_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
+// GANTI BAGIAN BAWAH INI DENGAN ID FOLDER GOOGLE DRIVE UTAMA ANDA
+var PARENT_FOLDER_ID = "https://drive.google.com/drive/folders/16aw4C5qTwJmNZw_FQe1Vcnm-M1xqmjbk"; 
+// -------------------
 
 function doPost(e) {
-  let result;
-
   try {
-    const action = e.parameter.action;
-
-    if (action === "uploadFile") {
-      const folderId = e.parameter.folderId;
-      const fileType = e.parameter.fileType; 
-      const siswaName = e.parameter.siswaName;
-      const fileNamePrefix = siswaName.replace(/ /g, '_') + "_" + fileType;
-      const fileBlob = e.parameters.file;
-
-      if (!folderId || folderId.trim() === "") throw new Error("Folder ID hilang. Data Siswa mungkin tidak lengkap.");
-      if (!fileBlob || (Array.isArray(fileBlob) && fileBlob.length === 0)) {
-         // FIX: Menggunakan throw Error untuk pesan yang lebih jelas
-         throw new Error("File PDF tidak ditemukan atau kosong.");
-      }
-
-      const uploadedBlob = Array.isArray(fileBlob) ? fileBlob[0] : fileBlob; 
-      
-      if (typeof uploadedBlob.setName !== 'function') {
-           throw new Error("Objek file tidak valid. Pastikan file terpilih dan Apps Script di-deploy dengan otorisasi Drive yang benar.");
-      }
-
-      const finalFileName = `${fileNamePrefix}_${Date.now()}.pdf`;
-      const namedBlob = uploadedBlob.setName(finalFileName);
-
-      const folder = DriveApp.getFolderById(folderId);
-      const file = folder.createFile(namedBlob); 
-
-      result = {
-        success: true,
-        message: `File ${fileType} berhasil diunggah dengan nama: ${file.getName()}`,
-        fileLink: file.getUrl()
-      };
-
-    } else if (action === "tambahSiswa") {
-      const { nis, name } = e.parameter;
-      result = tambahSiswa(nis, name);
-      
-    } else if (action === "hapusSiswa") {
-      const rowIndexRaw = e.parameter.rowIndex;
-      const rowIndex = parseInt(rowIndexRaw); 
-      
-      // FIX: Validasi ketat untuk menghindari error getRange(null, number)
-      if (isNaN(rowIndex) || rowIndex < 2) {
-          throw new Error("Gagal menghapus: Index baris tidak valid atau data tidak ditemukan.");
-      }
-      result = hapusSiswa(rowIndex);
-
-    } else {
-      throw new Error("Aksi tidak dikenal.");
-    }
-
-  } catch (error) {
-    result = { success: false, message: "Error Server: " + error.message };
-  }
-
-  return ContentService.createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-// =================================================================
-// 3. UTILITY FUNCTIONS (Sheet & Drive Management)
-// =================================================================
-
-function getSiswaList() {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
-  if (!sheet) throw new Error(`Sheet dengan nama "${SHEET_NAME}" tidak ditemukan.`); // Fail fast
+    var data = JSON.parse(e.postData.contents);
+    var action = data.action; 
+    var ss = SpreadsheetApp.openById(SS_ID);
+    var masterSheet = ss.getSheetByName("MasterData");
     
-  const range = sheet.getRange(1, 1, Math.min(sheet.getLastRow(), MAX_ROWS_TO_LOAD), sheet.getLastColumn());
-  const data = range.getValues();
-  if (data.length <= 1) return [];
-
-  const headers = data.shift(); 
-
-  const siswaList = data.map((row, index) => {
-    const rowIndex = index + 2; 
-    const nis = row[0] ? String(row[0]).trim() : '';
-    const name = row[1] ? String(row[1]).trim() : '';
-    let folderId = row[2] ? String(row[2]).trim() : '';
-
-    if (!name || !nis) return null; 
-
-    // Auto-create folder ID jika belum ada
-    if (!folderId) {
-      try {
-        folderId = createFolderForSiswa(name);
-        if (folderId) {
-          sheet.getRange(`C${rowIndex}`).setValue(folderId);
+    // === 1. FITUR UPLOAD FILE ===
+    if (action == "upload") {
+      var namaSiswa = data.namaSiswa;
+      var fileData = data.fileData; // Base64
+      var fileName = data.fileName;
+      var jenisFile = data.jenisDocs;
+      
+      var dataSiswa = masterSheet.getDataRange().getValues();
+      var folderId = "";
+      
+      // Mencari ID Folder berdasarkan Nama Siswa (Kolom C / Index 2)
+      for (var i = 1; i < dataSiswa.length; i++) {
+        if (dataSiswa[i][2] == namaSiswa) { 
+          folderId = dataSiswa[i][4]; // Ambil Folder ID (Kolom E / Index 4)
+          break;
         }
-      } catch (e) {
-        folderId = null; 
       }
+      
+      if (folderId == "" || folderId == undefined) {
+        return responseJSON("error", "Error: Folder ID siswa tidak ditemukan. Cek MasterData.");
+      }
+
+      var folder = DriveApp.getFolderById(folderId);
+      var contentType = data.mimeType || "application/pdf";
+      var decoded = Utilities.base64Decode(fileData.split(',')[1]);
+      var blob = Utilities.newBlob(decoded, contentType, fileName);
+      var file = folder.createFile(blob);
+      
+      // Share file agar bisa dipreview
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+      // Catat di LogUpload
+      var logSheet = ss.getSheetByName("LogUpload");
+      logSheet.appendRow([new Date(), "Guru", namaSiswa, jenisFile, file.getUrl()]);
+      
+      return responseJSON("success", "File berhasil diupload & tersimpan!", file.getUrl());
     }
-    
-    return {
-      nis: nis,
-      name: name,
-      folderId: folderId,
-      rowIndex: rowIndex 
-    };
-  }).filter(siswa => siswa && siswa.folderId); 
 
-  return siswaList;
-}
+    // === 2. FITUR TAMBAH SISWA ===
+    else if (action == "addSiswa") {
+      var namaBaru = data.namaSiswa;
+      var nisBaru = data.nis; // Bisa kosong
 
-function tambahSiswa(nis, name) {
-  if (!nis || !name) {
-    return { success: false, message: "NIS dan Nama Siswa tidak boleh kosong." };
-  }
+      // Cek apakah nama sudah ada (Cegah Duplikat)
+      var dataCek = masterSheet.getDataRange().getValues();
+      for(var i=0; i<dataCek.length; i++){
+        if(dataCek[i][2] == namaBaru) return responseJSON("error", "Nama siswa sudah ada di database!");
+      }
 
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
-  if (!sheet) throw new Error(`Sheet dengan nama "${SHEET_NAME}" tidak ditemukan.`); 
-    
-  const siswaNameClean = name.trim();
-  const nisClean = String(nis).trim();
+      // Buat Nama Folder: "Nama" atau "Nama - NIS"
+      var folderName = nisBaru ? (namaBaru + " - " + nisBaru) : namaBaru;
 
-  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).getValues();
-  if (data.some(row => String(row[0]).trim() === nisClean || String(row[1]).trim() === siswaNameClean)) {
-    return { success: false, message: `Siswa dengan NIS ${nisClean} atau nama ${siswaNameClean} sudah ada.` };
-  }
+      var parentFolder = DriveApp.getFolderById(PARENT_FOLDER_ID);
+      var newFolder = parentFolder.createFolder(folderName);
+      var newFolderId = newFolder.getId();
+      
+      // Set Permission Folder Siswa (Opsional, agar bisa dilihat publik linknya)
+      newFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
-  const folderId = createFolderForSiswa(siswaNameClean);
-  
-  if (!folderId) {
-      throw new Error(`Gagal membuat folder Drive untuk ${siswaNameClean}. Cek ID folder induk.`);
-  }
+      var nextNo = masterSheet.getLastRow(); // Nomor urut sederhana
 
-  sheet.appendRow([nisClean, siswaNameClean, folderId]);
+      // Simpan ke MasterData: [No, NIS, Nama, Kelas, FolderID]
+      masterSheet.appendRow([nextNo, nisBaru, namaBaru, "Siswa Baru", newFolderId]);
+      
+      return responseJSON("success", "Siswa berhasil ditambahkan & Folder dibuat otomatis!");
+    }
 
-  return { 
-    success: true, 
-    message: `Siswa ${siswaNameClean} berhasil ditambahkan.`,
-    data: { nis: nisClean, name: siswaNameClean, folderId: folderId, rowIndex: sheet.getLastRow() }
-  };
-}
+    // === 3. FITUR HAPUS SISWA ===
+    else if (action == "deleteSiswa") {
+      var namaHapus = data.namaSiswa;
+      var dataSiswa = masterSheet.getDataRange().getValues();
+      var rowIndex = -1;
 
-function hapusSiswa(rowIndex) {
-  // Check ini mungkin sudah dilakukan di doPost, tapi sebagai safeguard
-  if (rowIndex < 2) { 
-    return { success: false, message: "Index baris tidak valid untuk dihapus." };
-  }
-  
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
-  if (!sheet) throw new Error(`Sheet dengan nama "${SHEET_NAME}" tidak ditemukan.`); 
-    
-  // Pastikan baris yang akan dihapus tidak kosong
-  const siswaName = sheet.getRange(rowIndex, 2).getValue();
-  if (!siswaName) {
-      throw new Error(`Baris ${rowIndex} tidak memiliki data siswa untuk dihapus.`);
-  }
-  
-  sheet.deleteRow(rowIndex);
-  
-  return { 
-    success: true, 
-    message: `Data siswa ${siswaName} (Baris ${rowIndex}) berhasil dihapus dari Sheet.`,
-    rowIndex: rowIndex
-  };
-}
+      for (var i = 1; i < dataSiswa.length; i++) {
+        if (dataSiswa[i][2] == namaHapus) {
+          rowIndex = i + 1; // Konversi index array ke nomor baris sheet
+          break;
+        }
+      }
 
-function getPreviewLink(folderId, fileType) {
-  // FIX: Validasi folderId untuk mengatasi error "Invalid argument: id"
-  if (!folderId || typeof folderId !== 'string' || folderId.trim() === "") {
-      return {
-        success: false,
-        message: "Error Data: Folder ID siswa tidak valid atau kosong. Mohon periksa data sheet.",
-        previewLink: "",
-        downloadLink: ""
-      };
-  }
-    
-  try {
-    const folder = DriveApp.getFolderById(folderId); // ID sudah terjamin valid
-    const searchString = `title contains '${fileType}' and mimeType = 'application/pdf'`;
-    const files = folder.searchFiles(searchString);
-
-    let latestFile = null;
-    let latestTime = 0;
-
-    while (files.hasNext()) {
-      const file = files.next();
-      if (file.getDateCreated().getTime() > latestTime) {
-        latestTime = file.getDateCreated().getTime();
-        latestFile = file;
+      if (rowIndex != -1) {
+        masterSheet.deleteRow(rowIndex);
+        return responseJSON("success", "Data siswa berhasil dihapus dari daftar.");
+      } else {
+        return responseJSON("error", "Data tidak ditemukan.");
       }
     }
 
-    if (latestFile) {
-      return {
-        success: true,
-        previewLink: latestFile.getUrl(),
-        downloadLink: latestFile.getDownloadUrl()
-      };
-    } else {
-      return {
-        success: false,
-        message: `File ${fileType} tidak ditemukan dalam folder siswa ini.`,
-        previewLink: "",
-        downloadLink: ""
-      };
-    }
-  } catch (error) {
-    Logger.log("Error getPreviewLink: " + error.message);
-    return {
-      success: false,
-      message: "Error Server: Gagal mencari file. Pastikan Folder ID Siswa valid dan Anda punya izin.",
-      previewLink: "",
-      downloadLink: ""
-    };
+  } catch (f) {
+    return responseJSON("error", "Terjadi Kesalahan: " + f.toString());
   }
 }
 
-function createFolderForSiswa(siswaName) {
-  try {
-    const parentFolder = DriveApp.getFolderById(PARENT_FOLDER_ID);
-    const newFolderName = siswaName.trim();
-    const existingFolders = parentFolder.getFoldersByName(newFolderName);
+// Helper untuk format JSON respons
+function responseJSON(status, msg, link) {
+  return ContentService.createTextOutput(JSON.stringify({
+    result: status, message: msg, link: link || ""
+  })).setMimeType(ContentService.MimeType.JSON);
+}
 
-    if (existingFolders.hasNext()) {
-      return existingFolders.next().getId();
+// === FUNGSI AMBIL DATA (GET) ===
+function doGet(e) {
+  var action = e.parameter.action;
+  var ss = SpreadsheetApp.openById(SS_ID);
+  
+  // Ambil Data Monitoring (Gabungan Master + Log)
+  if (action == "getDataMonitoring") {
+    var masterSheet = ss.getSheetByName("MasterData");
+    // Ambil semua data (Baris 2 s/d akhir, Kolom A s/d E)
+    var masterData = masterSheet.getRange(2, 1, masterSheet.getLastRow() - 1, 5).getValues(); 
+    
+    var logSheet = ss.getSheetByName("LogUpload");
+    var logData = [];
+    if (logSheet.getLastRow() > 1) {
+      // Ambil Nama(C), Jenis(D), Link(E) dari Log
+      logData = logSheet.getRange(2, 3, logSheet.getLastRow() - 1, 3).getValues(); 
     }
-
-    const newFolder = parentFolder.createFolder(newFolderName);
-    return newFolder.getId();
-  } catch (e) {
-    Logger.log("Gagal membuat/mendapatkan folder: " + e.message);
-    return null; 
+    
+    // Mapping Data
+    var result = masterData.map(function(row) {
+      var namaSiswa = row[2]; // Kolom C
+      var nisSiswa = row[1];  // Kolom B
+      
+      // Cari apakah siswa ini ada di LogUpload
+      var entry = logData.find(r => r[0] === namaSiswa);
+      
+      return { 
+        nis: nisSiswa,
+        nama: namaSiswa,
+        status: entry ? "Sudah" : "Belum",
+        link: entry ? entry[2] : "#",
+        jenis: entry ? entry[1] : "-"
+      };
+    });
+    
+    return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
   }
+  
+  // Default: Ambil List Nama Saja (Untuk Dropdown)
+  var masterSheet = ss.getSheetByName("MasterData");
+  var data = masterSheet.getRange(2, 3, masterSheet.getLastRow() - 1, 1).getValues();
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
 }

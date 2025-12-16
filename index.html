@@ -1,186 +1,185 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="id">
 <head>
-    <base target="_top">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Kurikulum - Upload & Preview</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
+        /* Gradasi Warna Menarik */
         body {
-            background-color: #f8f9fa;
+            background: linear-gradient(135deg, #e0f7fa 0%, #00bcd4 100%); /* Cyan/Turquoise gradient */
+            min-height: 100vh;
+            padding-bottom: 50px;
         }
-
-        .container-fluid {
-            max-width: 1200px;
-            margin-top: 20px;
-        }
-
         .card {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border: none;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+        }
+        .nav-link.active {
+            background-color: #00bcd4 !important;
+            color: white !important;
+            border-radius: 15px 15px 0 0;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #e0f7fa;
+            cursor: pointer;
+        }
+        .preview-iframe {
+            height: 600px;
+            width: 100%;
+            border: 2px solid #00bcd4;
             border-radius: 8px;
         }
-
-        #previewFrame {
-            width: 100%;
-            height: 600px;
-            border: 1px solid #dee2e6;
-            margin-top: 15px;
-            border-radius: 4px;
+        .btn-primary {
+            background-color: #00bcd4;
+            border-color: #00bcd4;
         }
-
-        .spinner-border {
-            width: 1.5rem;
-            height: 1.5rem;
-        }
-
-        .table-scroll {
-            max-height: 300px;
-            overflow-y: auto;
+        .btn-primary:hover {
+            background-color: #0097a7;
+            border-color: #0097a7;
         }
     </style>
 </head>
-
 <body>
-    <div class="container-fluid">
-        <h3 class="mb-4 text-center text-primary">Pusat Data Ledger & Rapor Siswa</h3>
 
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card p-3">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="card-title m-0">Data Siswa</h5>
-                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addSiswaModal">
-                            <i class="fas fa-plus-circle me-1"></i> Tambah Siswa
-                        </button>
-                    </div>
-
-                    <div id="siswaListTableContainer" class="table-scroll">
-                        <table class="table table-striped table-hover table-sm" id="siswaTable">
-                            <thead class="sticky-top bg-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th>NIS</th>
-                                    <th>Nama Siswa</th>
-                                    <th>Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody id="siswaTableBody">
-                                <tr><td colspan="4" class="text-center">Memuat data...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+    <div class="container py-5">
+        <h1 class="text-center mb-5" style="color: #004d40;">Sistem Pengelolaan Dokumen Kurikulum 🎓</h1>
+        <div class="card">
+            <div class="card-header p-0 bg-white" style="border-radius: 15px 15px 0 0;">
+                <ul class="nav nav-tabs border-0" id="myTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab" aria-controls="upload" aria-selected="true">📤 Upload File</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview" type="button" role="tab" aria-controls="preview" aria-selected="false">🔍 Preview Dokumen</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="manage-tab" data-bs-toggle="tab" data-bs-target="#manage" type="button" role="tab" aria-controls="manage" aria-selected="false">⚙️ Pengelolaan Data</button>
+                    </li>
+                </ul>
             </div>
-        </div>
+            
+            <div class="card-body">
+                <div class="tab-content" id="myTabContent">
+                    
+                    <div class="tab-pane fade show active" id="upload" role="tabpanel" aria-labelledby="upload-tab">
+                        <h5 class="card-title text-primary">Form Unggah Dokumen</h5>
+                        <form id="uploadForm">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Pilih Tipe Dokumen</label><br>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="fileType" id="typeLedger" value="Ledger" required>
+                                    <label class="form-check-label" for="typeLedger">Ledger</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="fileType" id="typeRapor" value="Rapor">
+                                    <label class="form-check-label" for="typeRapor">Rapor</label>
+                                </div>
+                            </div>
 
-        <div class="row">
-            <div class="col-md-6 mb-4">
-                <div class="card p-3 h-100">
-                    <h5 class="card-title text-info">Pilih dan Pratinjau</h5>
-                    <div class="mb-3">
-                        <label for="siswaSelect" class="form-label">Siswa Terpilih:</label>
-                        <select class="form-select" id="siswaSelect" onchange="handleSiswaChange()">
-                            <option value="" data-folder-id="">--- Pilih Siswa ---</option>
-                        </select>
-                        <small id="folderIdDisplay" class="form-text text-muted"></small>
+                            <div class="mb-3">
+                                <label for="siswaSelect" class="form-label fw-bold">Pilih Nama Siswa</label>
+                                <select class="form-select" id="siswaSelect" name="siswaSelect" required>
+                                    <option value="" disabled selected>Loading siswa...</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="fileInput" class="form-label fw-bold">Pilih File PDF</label>
+                                <input class="form-control" type="file" id="fileInput" accept=".pdf" required>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100">Upload File</button>
+                            <div id="uploadMessage" class="mt-3"></div>
+                        </form>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Pilih Tipe File:</label>
-                        <div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="fileTypeRadio" id="radioLedger" value="LEDGER" checked onchange="handleSiswaChange()">
-                                <label class="form-check-label" for="radioLedger">LEDGER</label>
+                    <div class="tab-pane fade" id="preview" role="tabpanel" aria-labelledby="preview-tab">
+                        <h5 class="card-title text-primary">Preview Dokumen Siswa Terbaru</h5>
+                        <div class="row">
+                            <div class="col-md-5">
+                                <label for="previewSiswaSelect" class="form-label fw-bold">Pilih Siswa</label>
+                                <select class="form-select mb-3" id="previewSiswaSelect">
+                                    <option value="" disabled selected>Pilih Siswa...</option>
+                                </select>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Pilih Dokumen</label><br>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="previewType" id="previewLedger" value="Ledger" checked>
+                                        <label class="form-check-label" for="previewLedger">Ledger</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="previewType" id="previewRapor" value="Rapor">
+                                        <label class="form-check-label" for="previewRapor">Rapor</label>
+                                    </div>
+                                </div>
+                                
+                                <button class="btn btn-info w-100 text-white" onclick="loadPreview()">Tampilkan Preview</button>
+                                
+                                <button id="downloadPrintBtn" class="btn btn-secondary w-100 mt-2" style="display:none;" onclick="openDownloadLink()">⬇️ Download / Print File</button>
+                                
+                                <div id="previewMessage" class="mt-3"></div>
                             </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="fileTypeRadio" id="radioRapor" value="RAPOR" onchange="handleSiswaChange()">
-                                <label class="form-check-label" for="radioRapor">RAPOR</label>
+                            <div class="col-md-7">
+                                <p class="text-muted mt-3 mt-md-0">Area Preview:</p>
+                                <iframe id="pdfPreviewFrame" class="preview-iframe" frameborder="0" allowfullscreen></iframe>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="d-flex justify-content-between align-items-center mt-auto">
-                        <h6 class="m-0">Pratinjau File:</h6>
-                        <a href="#" id="downloadPrintBtn" class="btn btn-outline-secondary btn-sm" style="display: none;" target="_blank">
-                            <i class="fas fa-download me-1"></i> Download/Print
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6 mb-4">
-                <div class="card p-3 border-success h-100">
-                    <h5 class="card-title text-success">Upload File PDF</h5>
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-8">
-                            <label for="fileInput" class="form-label">Pilih File PDF Ledger/Rapor:</label>
-                            <input class="form-control" type="file" id="fileInput" accept=".pdf" required>
+                    <div class="tab-pane fade" id="manage" role="tabpanel" aria-labelledby="manage-tab">
+                        <h5 class="card-title text-primary">Pengelolaan Data Siswa (Tambah/Hapus)</h5>
+                        
+                        <div class="card mb-4 p-3 bg-light border-0">
+                            <h6 class="text-success">➕ Tambah Siswa Baru</h6>
+                            <form id="addSiswaForm" class="row g-3">
+                                <div class="col-md-5">
+                                    <input type="text" class="form-control" id="addNamaSiswa" placeholder="Nama Siswa Lengkap" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control" id="addKelas" placeholder="Kelas (contoh: X AKL)" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="submit" class="btn btn-success w-100">Tambah & Buat Folder</button>
+                                </div>
+                            </form>
+                            <div id="addSiswaMessage" class="mt-3"></div>
                         </div>
-                        <div class="col-md-4">
-                            <button class="btn btn-success w-100" id="uploadBtn" onclick="uploadFile()">
-                                <span id="uploadSpinner" class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
-                                Upload
-                            </button>
-                        </div>
-                    </div>
-                    <div id="uploadMessageArea" class="mt-3"></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card p-3 mb-4">
-            <div id="previewMessageArea" class="mb-2"></div>
-            <iframe id="previewFrame" title="Pratinjau File"></iframe>
-        </div>
 
+                        <h6 class="text-danger">➖ Hapus Data Siswa</h6>
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr class="table-primary">
+                                    <th>#</th>
+                                    <th>Nama Siswa</th>
+                                    <th>Kelas</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="siswaTableBody">
+                                <tr><td colspan="4" class="text-center">Memuat data siswa...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
 
-    </div>
-    
-    <div class="modal fade" id="addSiswaModal" tabindex="-1" aria-labelledby="addSiswaModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addSiswaModalLabel">Tambah Data Siswa Baru</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="newNis" class="form-label">NIS (Nomor Induk Siswa)</label>
-                        <input type="text" class="form-control" id="newNis" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="newName" class="form-label">Nama Siswa</label>
-                        <input type="text" class="form-control" id="newName" required>
-                    </div>
-                    <div id="modalMessageArea" class="mt-3"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-                    <button type="button" class="btn btn-primary" id="saveSiswaBtn" onclick="tambahSiswa()">
-                        <span id="addSpinner" class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
-                        Simpan Siswa
-                    </button>
                 </div>
             </div>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
         // 🔴 PENTING: GANTI DENGAN URL WEB APP APPS SCRIPT ANDA YANG SUDAH DIOTORISASI (berakhir /exec)
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxiDXzgl0b9CdC0z78X3p8I0LwtWZYm3Ofm153y2fJxrkpbOX335H8XUK8IDchSckrxRA/exec"; 
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzxpVpAPSnfJ2WJviFUWQCwg0Uo3fd26b9R3i97lfb1PRxYDVChV_PzGENgkmBp8vsGYA/exec"; 
         
-        let currentFolderId = null;
-        let currentSiswaName = null;
-        let siswaData = []; // Menyimpan semua data siswa
-        let isLoading = false;
+        let siswaData = [];
+        let currentDownloadLink = ''; 
 
-        document.addEventListener('DOMContentLoaded', loadSiswaList);
-
-        // =================================================================
-        // UTILITY FUNCTIONS (Client-Side)
-        // =================================================================
-
+        // --- Fungsi Utama untuk Fetch Data ---
         async function fetchData(url, options = {}) {
             try {
                 const response = await fetch(url, options);
@@ -188,129 +187,197 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const result = await response.json();
+                if (!result.success) {
+                    // Menangkap pesan error dari Apps Script
+                    throw new Error(result.message || "Operasi gagal di server Apps Script.");
+                }
                 return result;
             } catch (error) {
-                console.error('Fetch Error:', error);
-                return {
-                    success: false,
-                    message: `Koneksi gagal: ${error.message}`
-                };
+                console.error("Fetch Error:", error);
+                // Mengirim pesan error yang lebih jelas ke front-end
+                return { success: false, message: `Koneksi gagal atau error: ${error.message}` };
             }
         }
 
-        function showMessage(type, message, targetId = 'uploadMessageArea') {
-            const messageDiv = document.getElementById(targetId);
-            messageDiv.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>`;
-        }
-        
-        function setLoading(loading, btnId = 'uploadBtn', spinnerId = 'uploadSpinner', text = 'Upload') {
-            isLoading = loading;
-            const btn = document.getElementById(btnId);
-            const spinner = document.getElementById(spinnerId);
-            btn.disabled = loading;
-            spinner.classList.toggle('d-none', !loading);
-            btn.innerHTML = loading ? `<span id="${spinnerId}" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> ${text}...` : `<i class="fas fa-upload me-1"></i> ${text}`;
-        }
-        
-        // =================================================================
-        // LOAD & RENDER SISWA
-        // =================================================================
-
+        // --- 1. Load Data Siswa (Membuat Dropdown) ---
         async function loadSiswaList() {
-            const siswaSelect = document.getElementById('siswaSelect');
-            const tableBody = document.getElementById('siswaTableBody');
-            
-            siswaSelect.innerHTML = '<option value="" data-folder-id="">--- Memuat Data Siswa... ---</option>';
-            tableBody.innerHTML = '<tr><td colspan="4" class="text-center"><i class="fas fa-sync fa-spin me-2"></i>Memuat data...</td></tr>';
-            
             const url = `${APPS_SCRIPT_URL}?action=getSiswaList`;
             const result = await fetchData(url);
-            
-            if (result.success && Array.isArray(result.data)) {
-                siswaData = result.data;
-                renderSiswaDropdown();
-                renderSiswaTable();
-                showMessage('info', `Total ${siswaData.length} siswa dimuat.`, 'previewMessageArea');
-            } else {
-                siswaSelect.innerHTML = `<option value="" disabled>${result.message || 'Gagal memuat data siswa.'}</option>`;
-                tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">${result.message || 'Gagal memuat data siswa. Cek Sheet ID dan Deployment.'}</td></tr>`;
-                showMessage('danger', result.message || 'Gagal memuat data siswa.', 'previewMessageArea');
-            }
-        }
-        
-        function renderSiswaDropdown() {
-            const siswaSelect = document.getElementById('siswaSelect');
-            siswaSelect.innerHTML = '<option value="" data-folder-id="">--- Pilih Siswa ---</option>';
-            
-            siswaData.forEach(siswa => {
-                const option = document.createElement('option');
-                option.value = siswa.name;
-                option.textContent = `${siswa.name} (NIS: ${siswa.nis})`;
-                option.setAttribute('data-folder-id', siswa.folderId);
-                option.setAttribute('data-row-index', siswa.rowIndex);
-                siswaSelect.appendChild(option);
-            });
-        }
-        
-        function renderSiswaTable() {
+
+            const selectUpload = document.getElementById('siswaSelect');
+            const selectPreview = document.getElementById('previewSiswaSelect');
             const tableBody = document.getElementById('siswaTableBody');
+
+            selectUpload.innerHTML = '<option value="" disabled selected>Pilih Siswa...</option>';
+            selectPreview.innerHTML = '<option value="" disabled selected>Pilih Siswa...</option>';
             tableBody.innerHTML = '';
             
-            if (siswaData.length === 0) {
-                 tableBody.innerHTML = '<tr><td colspan="4" class="text-center">Belum ada data siswa.</td></tr>';
-                 return;
+            if (result.success) {
+                siswaData = result.data;
+                if (siswaData.length === 0) {
+                     tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-secondary">Belum ada data siswa.</td></tr>`;
+                     return;
+                }
+                
+                siswaData.forEach(siswa => {
+                    const optionText = `${siswa.nama} (${siswa.kelas})`;
+                    
+                    // Dropdown Upload
+                    const optionUpload = new Option(optionText, siswa.folderId);
+                    optionUpload.setAttribute('data-siswa-name', siswa.nama);
+                    
+                    // Menonaktifkan opsi jika FOLDER_ID kosong (Pencegahan error upload)
+                    if (!siswa.folderId || siswa.folderId.trim() === "") {
+                        optionUpload.disabled = true;
+                        optionUpload.textContent += " (Folder ID Kosong!)";
+                    }
+
+                    selectUpload.add(optionUpload);
+                    
+                    // Dropdown Preview
+                    const optionPreview = new Option(optionText, siswa.folderId);
+                    selectPreview.add(optionPreview);
+
+                    // Baris tabel untuk Pengelolaan Data
+                    const row = tableBody.insertRow();
+                    row.insertCell().textContent = siswaData.indexOf(siswa) + 1;
+                    row.insertCell().textContent = siswa.nama;
+                    row.insertCell().textContent = siswa.kelas;
+                    
+                    const actionCell = row.insertCell();
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Hapus';
+                    deleteBtn.className = 'btn btn-danger btn-sm';
+                    deleteBtn.onclick = () => handleDelete(siswa.rowIndex, siswa.nama);
+                    actionCell.appendChild(deleteBtn);
+                });
+            } else {
+                // Menampilkan error jika gagal memuat data
+                const errorMessage = result.message; 
+                selectUpload.innerHTML = `<option value="" disabled selected>Error: ${errorMessage.substring(0, 40)}...</option>`;
+                tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">Gagal memuat: ${errorMessage}</td></tr>`;
             }
-            
-            siswaData.forEach((siswa, index) => {
-                const row = tableBody.insertRow();
-                row.setAttribute('data-row-index', siswa.rowIndex);
-                
-                row.insertCell().textContent = index + 1;
-                row.insertCell().textContent = siswa.nis;
-                row.insertCell().textContent = siswa.name;
-                
-                const actionCell = row.insertCell();
-                actionCell.innerHTML = `
-                    <button class="btn btn-outline-danger btn-sm" onclick="confirmHapusSiswa('${siswa.name}', ${siswa.rowIndex})">
-                        <i class="fas fa-trash-alt"></i> Hapus
-                    </button>`;
-            });
         }
-
-
-        // =================================================================
-        // A. FITUR UPLOAD & PREVIEW
-        // =================================================================
         
-        function handleSiswaChange() {
+        // --- 2. Handle Upload File ---
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const messageDiv = document.getElementById('uploadMessage');
+            messageDiv.innerHTML = '<div class="alert alert-info">Mengunggah... Mohon tunggu. Proses ini mungkin memakan waktu beberapa detik.</div>';
+
+            const fileInput = document.getElementById('fileInput').files[0];
             const siswaSelect = document.getElementById('siswaSelect');
             const selectedOption = siswaSelect.options[siswaSelect.selectedIndex];
-            const folderIdDisplay = document.getElementById('folderIdDisplay');
-            const fileType = document.querySelector('input[name="fileTypeRadio"]:checked').value;
+            
+            // 🛑 VALIDASI KLIEN-SIDE EKSPLISIT UNTUK MENCEGAH ERROR "File PDF Hilang"
+            if (!fileInput) {
+                messageDiv.innerHTML = '<div class="alert alert-danger">Mohon pilih file PDF dari komputer Anda sebelum mengklik Upload.</div>';
+                return; 
+            }
+            // 🛑 AKHIR VALIDASI TAMBAHAN
 
-            currentFolderId = selectedOption.getAttribute('data-folder-id');
-            currentSiswaName = selectedOption.value;
+            // Cek apakah option yang dipilih adalah placeholder atau disabled
+            if (!selectedOption || selectedOption.disabled || selectedOption.value === "") {
+                messageDiv.innerHTML = '<div class="alert alert-danger">Pilih siswa yang valid (pastikan FOLDER ID siswa tidak kosong di Google Sheet).</div>';
+                return;
+            }
 
-            if (currentFolderId) {
-                folderIdDisplay.textContent = `Folder ID: ${currentFolderId}`;
-                getPreview(currentFolderId, fileType, currentSiswaName);
+            const folderId = selectedOption.value;
+            const siswaName = selectedOption.getAttribute('data-siswa-name');
+            const fileType = document.querySelector('input[name="fileType"]:checked').value;
+            
+            const formData = new FormData();
+            formData.append('file', fileInput);
+            formData.append('action', 'uploadFile');
+            formData.append('folderId', folderId);
+            formData.append('siswaName', siswaName);
+            formData.append('fileType', fileType);
+
+            const url = `${APPS_SCRIPT_URL}`;
+
+            const result = await fetchData(url, { method: 'POST', body: formData });
+
+            if (result.success) {
+                messageDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+                document.getElementById('uploadForm').reset();
             } else {
-                folderIdDisplay.textContent = '';
-                showMessage('warning', 'Mohon pilih siswa terlebih dahulu.', 'previewMessageArea');
-                document.getElementById('previewFrame').src = "";
-                document.getElementById('downloadPrintBtn').style.display = 'none';
+                // Error spesifik dari Code.gs akan ditampilkan di sini
+                messageDiv.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+            }
+        });
+
+        // --- 3. Handle Tambah Siswa ---
+        document.getElementById('addSiswaForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const messageDiv = document.getElementById('addSiswaMessage');
+            messageDiv.innerHTML = '<div class="alert alert-info">Membuat folder dan menambahkan data...</div>';
+
+            const nama = document.getElementById('addNamaSiswa').value;
+            const kelas = document.getElementById('addKelas').value;
+
+            const url = `${APPS_SCRIPT_URL}`;
+            const data = { action: 'tambahSiswa', nama: nama, kelas: kelas };
+            
+            const result = await fetchData(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(data)
+            });
+
+            if (result.success) {
+                messageDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+                document.getElementById('addSiswaForm').reset();
+                loadSiswaList();
+            } else {
+                messageDiv.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+            }
+        });
+
+        // --- 4. Handle Hapus Siswa ---
+        async function handleDelete(rowIndex, namaSiswa) {
+            if (!confirm(`Yakin ingin menghapus data siswa ${namaSiswa} (baris ke-${rowIndex})? File di Drive tidak akan otomatis terhapus, hanya data di Sheet. Lanjutkan?`)) {
+                return;
+            }
+
+            const messageDiv = document.getElementById('addSiswaMessage');
+            messageDiv.innerHTML = `<div class="alert alert-info">Menghapus data ${namaSiswa}...</div>`;
+            
+            const url = `${APPS_SCRIPT_URL}`;
+            const data = { action: 'hapusSiswa', rowIndex: rowIndex };
+
+            const result = await fetchData(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(data)
+            });
+
+            if (result.success) {
+                messageDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+                loadSiswaList();
+            } else {
+                messageDiv.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
             }
         }
         
-        async function getPreview(folderId, fileType, siswaName) {
-            const previewFrame = document.getElementById('previewFrame');
+        // --- 5. Handle Preview File (Memuat file berdasarkan tipe) ---
+        async function loadPreview() {
+            const previewSiswaSelect = document.getElementById('previewSiswaSelect');
+            const folderId = previewSiswaSelect.value;
+            const fileType = document.querySelector('input[name="previewType"]:checked').value; 
+            const previewFrame = document.getElementById('pdfPreviewFrame');
+            const messageDiv = document.getElementById('previewMessage');
             const downloadPrintBtn = document.getElementById('downloadPrintBtn');
-            downloadPrintBtn.style.display = 'none';
             
-            showMessage('info', `<i class="fas fa-search me-1"></i> Mencari file ${fileType} untuk ${siswaName}...`, 'previewMessageArea');
+            downloadPrintBtn.style.display = 'none';
+            currentDownloadLink = '';
+            
+            if (!folderId) {
+                messageDiv.innerHTML = '<div class="alert alert-warning">Mohon pilih siswa terlebih dahulu.</div>';
+                previewFrame.src = "";
+                return;
+            }
+            
+            messageDiv.innerHTML = '<div class="alert alert-info">Mencari file PDF terbaru...</div>';
             previewFrame.src = ""; 
 
             const url = `${APPS_SCRIPT_URL}?action=getPreviewLink&folderId=${folderId}&fileType=${fileType}`;
@@ -318,150 +385,29 @@
 
             if (result.success) {
                 previewFrame.src = result.previewLink;
-                downloadPrintBtn.href = result.downloadLink;
+                currentDownloadLink = result.downloadLink; 
                 downloadPrintBtn.style.display = 'block';
-                showMessage('success', `<i class="fas fa-check-circle me-1"></i> Pratinjau file ${fileType} terbaru ditemukan.`, 'previewMessageArea');
-            } else {
-                showMessage('info', `<i class="fas fa-exclamation-triangle me-1"></i> ${result.message}`, 'previewMessageArea');
-                previewFrame.src = "";
-            }
-        }
-        
-        async function uploadFile() {
-            if (isLoading) return;
-
-            const fileInput = document.getElementById('fileInput').files[0];
-            const fileType = document.querySelector('input[name="fileTypeRadio"]:checked').value;
-            const folderId = currentFolderId;
-            const siswaName = currentSiswaName;
-
-            if (!folderId || folderId === "") {
-                showMessage('danger', 'ERROR: Mohon pilih siswa terlebih dahulu.');
-                return;
-            }
-            if (!fileInput) {
-                showMessage('danger', 'ERROR: Mohon pilih file PDF yang akan diunggah.');
-                return;
-            }
-
-            setLoading(true, 'uploadBtn', 'uploadSpinner', 'Upload');
-            showMessage('info', `<i class="fas fa-upload me-1"></i> Mengunggah file ${fileType} untuk ${siswaName}... Ini mungkin memakan waktu beberapa detik.`, 'uploadMessageArea');
-
-            try {
-                const formData = new FormData();
-                formData.append('action', 'uploadFile');
-                formData.append('folderId', folderId);
-                formData.append('fileType', fileType);
-                formData.append('siswaName', siswaName);
-                formData.append('file', fileInput); 
-
-                const options = {
-                    method: 'POST',
-                    body: formData,
-                };
-
-                const result = await fetchData(APPS_SCRIPT_URL, options);
                 
-                if (result.success) {
-                    showMessage('success', result.message, 'uploadMessageArea');
-                    getPreview(folderId, fileType, siswaName); // Muat ulang pratinjau
-                    document.getElementById('fileInput').value = ''; // Reset input file
-                } else {
-                    showMessage('danger', result.message || 'Upload gagal karena error server yang tidak diketahui.', 'uploadMessageArea');
-                }
-            } catch (error) {
-                showMessage('danger', `Kesalahan Jaringan/Aplikasi: ${error.message}`, 'uploadMessageArea');
-            } finally {
-                setLoading(false, 'uploadBtn', 'uploadSpinner', 'Upload');
+                messageDiv.innerHTML = `<div class="alert alert-success">Preview ${fileType} berhasil dimuat.</div>`;
+            } else {
+                previewFrame.src = "";
+                messageDiv.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
             }
         }
 
-        // =================================================================
-        // B. FITUR TAMBAH SISWA (CRUD)
-        // =================================================================
-
-        async function tambahSiswa() {
-            const newNis = document.getElementById('newNis').value.trim();
-            const newName = document.getElementById('newName').value.trim();
-            
-            if (!newNis || !newName) {
-                showMessage('danger', 'NIS dan Nama harus diisi.', 'modalMessageArea');
-                return;
-            }
-            
-            setLoading(true, 'saveSiswaBtn', 'addSpinner', 'Simpan Siswa');
-            showMessage('info', 'Memproses data siswa baru...', 'modalMessageArea');
-
-            try {
-                const formData = new FormData();
-                formData.append('action', 'tambahSiswa');
-                formData.append('nis', newNis);
-                formData.append('name', newName);
-
-                const options = { method: 'POST', body: formData };
-                const result = await fetchData(APPS_SCRIPT_URL, options);
-
-                if (result.success) {
-                    // Update data lokal dan UI
-                    siswaData.push(result.data);
-                    renderSiswaDropdown();
-                    renderSiswaTable();
-                    
-                    showMessage('success', result.message, 'modalMessageArea');
-                    // Reset form modal
-                    document.getElementById('newNis').value = '';
-                    document.getElementById('newName').value = '';
-                    // Tutup modal setelah 2 detik
-                    setTimeout(() => bootstrap.Modal.getInstance(document.getElementById('addSiswaModal')).hide(), 2000);
-                    
-                } else {
-                    showMessage('danger', result.message, 'modalMessageArea');
-                }
-            } catch (error) {
-                 showMessage('danger', `Kesalahan: ${error.message}`, 'modalMessageArea');
-            } finally {
-                setLoading(false, 'saveSiswaBtn', 'addSpinner', 'Simpan Siswa');
-            }
-        }
-        
-        // =================================================================
-        // C. FITUR HAPUS SISWA (CRUD)
-        // =================================================================
-
-        function confirmHapusSiswa(siswaName, rowIndex) {
-             if (confirm(`Apakah Anda yakin ingin MENGHAPUS data siswa "${siswaName}" (Baris ${rowIndex}) dari Google Sheet? File Drive tidak akan terhapus.`)) {
-                hapusSiswa(rowIndex);
+        // --- 6. Fungsi Download / Print ---
+        function openDownloadLink() {
+            if (currentDownloadLink) {
+                window.open(currentDownloadLink, '_blank');
+            } else {
+                document.getElementById('previewMessage').innerHTML = '<div class="alert alert-warning">File belum dimuat atau tidak ditemukan.</div>';
             }
         }
 
-        async function hapusSiswa(rowIndex) {
-            // Nonaktifkan tombol hapus untuk baris yang dipilih saat proses
-            document.querySelector(`[data-row-index="${rowIndex}"] button`).disabled = true;
-
-            try {
-                const formData = new FormData();
-                formData.append('action', 'hapusSiswa');
-                formData.append('rowIndex', rowIndex);
-
-                const options = { method: 'POST', body: formData };
-                const result = await fetchData(APPS_SCRIPT_URL, options);
-
-                if (result.success) {
-                    showMessage('success', result.message, 'previewMessageArea');
-                    // Muat ulang daftar untuk memastikan index baris di Sheet sinkron (wajib setelah hapus baris)
-                    await loadSiswaList();
-                } else {
-                    showMessage('danger', result.message, 'previewMessageArea');
-                }
-            } catch (error) {
-                showMessage('danger', `Kesalahan: ${error.message}`, 'previewMessageArea');
-            }
-            // Tombol akan diaktifkan kembali jika loadSiswaList() gagal atau di dalam proses,
-            // tetapi cara paling aman adalah memuat ulang daftar.
-        }
-
+        // Load data siswa saat halaman selesai dimuat
+        document.addEventListener('DOMContentLoaded', loadSiswaList);
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
 
+</body>
 </html>
+
